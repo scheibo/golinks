@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang=en>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="favicon.png">
+	<title>{{.Title}}</title>
+	<meta name="token" content="{{.Token}}" />
+  <style>
+    body {
+      font-family: "Roboto", "Helvetica Neue", "Helvetica", "Arial", sans-serif;
+    }
+
+    #content {
+      margin: 1em auto;
+      max-width: 1200px;
+    }
+
+    table {
+      margin: 0px auto;
+      border-collapse: collapse;
+      text-align: left;
+      min-width: 70%;
+      border-spacing: 0px;
+      line-height: 1.15em;
+    }
+
+    td {
+      padding: 0.33em;
+    }
+
+    a {
+      color: blue;
+    }
+
+    .name {
+      font-weight: bold
+    }
+
+    .link {
+      word-break: break-all;
+      max-width: 70%;
+    }
+
+    .new {
+      font-weight: normal;
+      font-style: italic;
+    }
+
+    /* Mobile - Small */
+    table {
+      font-size: 10px;
+    }
+
+    /* Mobile - Medium */
+    @media(min-width: 375px) {
+      table {
+        font-size: 12px;
+      }
+    }
+
+    /* Mobile - Large */
+    @media(min-width: 425px) {
+      table {
+        font-size: 13px;
+      }
+    }
+
+    /* Tablet */
+    @media(min-width: 768px) {
+      table {
+        font-size: 15px;
+      }
+    }
+
+    /* Laptop */
+    @media(min-width: 1024px) {
+      table {
+        font-size: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="content">
+    <table>
+      <tbody>
+        <tr>
+					<td class="name new" contenteditable>{{.Name}}</td>
+					<td class="link new" contenteditable {{if .Name != ""}}autofocus{{end}}></td>
+				</tr>
+				{{range $pair := .Data}}
+        <tr>
+					<td class="name" contenteditable>{{$pair.name}}</td>
+					<td class="link" contenteditable>
+						<a href="{{$pair.link}}">{{$pair.link}}</a>
+				  </td>
+				</tr>
+				{{end}}
+      </tbody>
+    </table>
+  </div>
+</body>
+</html>

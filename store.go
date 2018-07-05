@@ -3,6 +3,7 @@ package golinks
 import (
 	"fmt"
 	"os"
+	"sync"
 )
 
 // Simple file store, use sqlite3 for a more robust backend
@@ -10,6 +11,7 @@ type FileStore struct {
 	order []string
 	cache map[string]string
 	file  *os.File
+	lock  *sync.RWMutex
 }
 
 func Open(filename string) (*FileStore, error) {
@@ -48,6 +50,9 @@ func Close() error {
 }
 
 func (s *FileStore) Get(name string) (string, bool) {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+
 	link, ok := s.get(name)
 	if !ok || link == "" {
 		return nil, false
@@ -56,6 +61,9 @@ func (s *FileStore) Get(name string) (string, bool) {
 }
 
 func (s *FileStore) Set(name, link string) error {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
 	_, err := f.WriteString(fmt.Sprintf("%s %s", name, link))
 	if err != nil {
 		return err
@@ -66,14 +74,14 @@ func (s *FileStore) Set(name, link string) error {
 }
 
 func (s *FileStore) Iterate(cb func(name, link string) error) error {
-	var set map[int]bool
+	var seen map[int]bool
 	for i := len(s.order) - 1; i >= 0; i-- {
 		next := order[i]
-		_, ok = set[next]
-		set[next] = true
+		_, ok = seen[next]
+		seen[next] = true
 		if !ok {
-			link, ok := s.cache[next]
-			if ok && link != "" {
+			link, ok := s.Get(next)
+			if ok {
 				if err := cb(next, link); err != nil {
 					return err
 				}

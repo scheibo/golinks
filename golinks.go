@@ -115,7 +115,7 @@ func getIndex(store *Store, token string, name string) *http.Handler {
 }
 
 func dispatchPost(store *Store, name, link, query string) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return &http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// NOTE: we share logic with getValidLink here, because we dispatch differently
 		// if the link param is missing
 		values, err := url.ParseQuery(r.URL.RawQuery)

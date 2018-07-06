@@ -86,17 +86,17 @@
     <table>
       <tbody>
         <tr>
-					<td class="name new" contenteditable>{{.Name}}</td>
-					<td class="link new" contenteditable {{if .Name != ""}}autofocus{{end}}></td>
-				</tr>
-				{{range $pair := .Data}}
+          <td class="name new" contenteditable>{{.Name}}</td>
+          <td class="link new" contenteditable {{if .Name != ""}}autofocus{{end}}></td>
+        </tr>
+        {{range $pair := .Data}}
         <tr>
-					<td class="name" contenteditable>{{$pair.name}}</td>
-					<td class="link" contenteditable>
-						<a href="{{$pair.link}}">{{$pair.link}}</a>
-				  </td>
-				</tr>
-				{{end}}
+          <td class="name" contenteditable>{{$pair.name}}</td>
+          <td class="link" contenteditable>
+            <a href="{{$pair.link}}">{{$pair.link}}</a>
+          </td>
+        </tr>
+        {{end}}
       </tbody>
     </table>
   </div>

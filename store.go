@@ -1,4 +1,4 @@
-package golinks
+package main
 
 import (
 	"bufio"

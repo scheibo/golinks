@@ -17,7 +17,10 @@ import (
 	"github.com/goware/urlx"
 	"github.com/scheibo/a1"
 	"github.com/tdewolff/minify"
+	"github.com/tdewolff/minify/css"
 	"github.com/tdewolff/minify/html"
+	"github.com/tdewolff/minify/js"
+	"github.com/tdewolff/minify/svg"
 )
 
 // NameLink holds a (name, link) pair for rendering.
@@ -38,12 +41,15 @@ type Store interface {
 	Iterate(cb func(name, link string) error) error
 }
 
-// serve acts as the router for the application: "/login" and "/logout" are treated specially,
-// everything else will either add or display mappings from name to links.
+// serve acts as the router for the application: "favicon.png", "/login", "/logout" are
+// treated specially, everything else will either add or display mappings from name to links.
 func serve(auth *a1.Client, store Store) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		path := r.URL.Path
+		log.Printf("%s %s\n", r.Method, path)
 		switch path {
+		case "/favicon.ico", "/favicon.png":
+			http.ServeFile(w, r, "favicon.png")
 		case "/login":
 			switch r.Method {
 			case "GET":
@@ -64,7 +70,7 @@ func serve(auth *a1.Client, store Store) http.Handler {
 			switch r.Method {
 			case "GET":
 				// NOTE: we only check auth within getLink as sometimes we redirect.
-				getLink(auth, store, name)
+				getLink(auth, store, name).ServeHTTP(w, r)
 			case "POST", "UPDATE":
 				update := r.Method == "UPDATE"
 				auth.CheckXSRF(auth.EnsureAuth(postLink(store, name, update))).ServeHTTP(w, r)
@@ -80,11 +86,12 @@ func serve(auth *a1.Client, store Store) http.Handler {
 // getLink is the handler for any GET request - if we know of a mapping we redirect, otherwise
 // we check auth and render the index with the name already filled into the new entry field.
 func getLink(auth *a1.Client, store Store, name string) http.Handler {
+	log.Println("getLink")
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		link, ok := store.Get(name)
 		if !ok {
 			if !auth.IsAuth(r) {
-				http.NotFound(w, r)
+				http.Redirect(w, r, "/login", 302)
 				return
 			}
 
@@ -96,6 +103,7 @@ func getLink(auth *a1.Client, store Store, name string) http.Handler {
 
 // getIndex renders the index of all saved name -> link mappings for an authed user.
 func getIndex(store Store, token string, name string) http.Handler {
+	log.Println("getIndex")
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var data []NameLink
 		err := store.Iterate(func(name, link string) error {
@@ -212,7 +220,10 @@ func normalizeLink(link string) (string, error) {
 
 // isValidName confirms that name is a valid path.
 func isValidName(name string) bool {
-	if name == "login" || name == "logout" {
+	if name == "favicon.ico" ||
+	   name == "favicon.png" ||
+	   name == "login" ||
+	   name == "logout" {
 		// shouldn't be possible anyway, but reject just in case
 		return false
 	}
@@ -220,7 +231,7 @@ func isValidName(name string) bool {
 	// this also should be somewhat redundant - if the name wasn't valid how
 	// did we get here in the first place?
 	_, err := url.Parse("/" + name)
-	return err != nil
+	return err == nil
 }
 
 // isValidLink confirms that link is a valid, absolute URL.
@@ -242,7 +253,10 @@ func httpError(w http.ResponseWriter, code int, err ...error) {
 
 func compileTemplates(filenames ...string) (*template.Template, error) {
 	m := minify.New()
+	m.AddFunc("text/css", css.Minify)
 	m.AddFunc("text/html", html.Minify)
+	m.AddFunc("text/javascript", js.Minify)
+	m.AddFunc("image/svg+xml", svg.Minify)
 
 	var tmpl *template.Template
 	for _, filename := range filenames {

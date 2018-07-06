@@ -21,7 +21,7 @@ type FileStore struct {
 	order []string
 	cache map[string]string
 	file  *os.File
-	lock  *sync.RWMutex
+	lock  sync.RWMutex
 }
 
 // Opens a FileStore backed by filename (and optional fz to enable fuzzy

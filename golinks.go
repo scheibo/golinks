@@ -20,17 +20,26 @@ import (
 	"github.com/tdewolff/minify/html"
 )
 
+// NameLink holds a (name, link) pair for rendering.
 type NameLink struct {
 	Name string
 	Link string
 }
 
+// Store provides the ability to get/set and iterate through name -> link pairs,
 type Store interface {
+	// Get returns the link and true Set for name, or "" and false if it doesn't exist.
 	Get(name string) (string, bool)
-	Set(name, link string) error // Delete(name) => Set(name, "")
+	// Set associates a link with a name. Set can be used to 'delete' a mapping by
+	// specifying "" as the link.
+	Set(name, link string) error
+	// Iterates through all the (name, link) pairs stored in the order they were last Set.
+	// If cb returns an error the iteration is stopped and Iterate will return with the same error.
 	Iterate(cb func(name, link string) error) error
 }
 
+// serve acts as the router for the application: "/login" and "/logout" are treated specially,
+// everything else will either add or display mappings from name to links.
 func serve(auth *a1.Client, store Store) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		path := r.URL.Path
@@ -54,6 +63,7 @@ func serve(auth *a1.Client, store Store) http.Handler {
 			}
 			switch r.Method {
 			case "GET":
+				// NOTE: we only check auth within getLink as sometimes we redirect.
 				getLink(auth, store, name)
 			case "POST", "UPDATE":
 				update := r.Method == "UPDATE"
@@ -67,6 +77,8 @@ func serve(auth *a1.Client, store Store) http.Handler {
 	})
 }
 
+// getLink is the handler for any GET request - if we know of a mapping we redirect, otherwise
+// we check auth and render the index with the name already filled into the new entry field.
 func getLink(auth *a1.Client, store Store, name string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		link, ok := store.Get(name)
@@ -82,6 +94,7 @@ func getLink(auth *a1.Client, store Store, name string) http.Handler {
 	})
 }
 
+// getIndex renders the index of all saved name -> link mappings for an authed user.
 func getIndex(store Store, token string, name string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var data []NameLink
@@ -105,43 +118,27 @@ func getIndex(store Store, token string, name string) http.Handler {
 	})
 }
 
+// postLink handlers creating new mappings or updating/deleting mappings from name to
+// the link parameter it receives in the request. If update is true, this will only support
+// updating already existing mappings.
 func postLink(store Store, name string, update bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		values, err := url.ParseQuery(r.URL.RawQuery)
-		if err != nil {
-			httpError(w, 500, err)
-			return
-		}
-
-		if len(values) > 1 {
-			httpError(w, 400, errors.New("too many query params"))
-			return
-		}
-
-		links, ok := values["link"]
-		if !ok {
-			httpError(w, 400, errors.New("missing link param"))
-		}
-
-		if len(links) > 1 {
-			httpError(w, 400, errors.New("too many link params"))
-			return
-		}
-
-		link := links[0]
+		link := r.PostFormValue("link")
 		// Empty or missing link means we attempt to delete.
 		if link == "" {
 			deleteLink(store, name)
 			return
 		}
 
-		link, err = normalizeLink(canonicalizeAlias(store, r.URL.Host, link))
+		// If link we actually an alias ("name" or "go/name") instead of a URL, we convert it.
+		// We also normalize the link so everything follows a uniform pattern.
+		link, err := normalizeLink(canonicalizeAlias(store, r.URL.Host, link))
 		if err != nil {
 			httpError(w, 400)
 			return
 		}
 
-		// UPDATE should onlyu work on links which already existed
+		// UPDATE should only work on links which already existed
 		if update {
 			_, ok := store.Get(name)
 			if !ok {
@@ -160,13 +157,9 @@ func postLink(store Store, name string, update bool) http.Handler {
 	})
 }
 
+// deleteLink removes any mappings for name from the store.
 func deleteLink(store Store, name string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.RawQuery != "" {
-			httpError(w, 400)
-			return
-		}
-
 		_, ok := store.Get(name)
 		if !ok {
 			httpError(w, 404)
@@ -183,7 +176,9 @@ func deleteLink(store Store, name string) http.Handler {
 	})
 }
 
-// If the link doesn't start with http then check if we can alias it.
+// canonicalizeAliases turns a link 'alias' into the correct absolute URL. Aliases
+// are of the form "name" or "go/name" provided "name" exists in the store.
+// We canonicalize the alias to point to the full link with the specified host.
 func canonicalizeAlias(store Store, host, link string) string {
 	if !strings.HasPrefix("http", link) {
 		link = strings.TrimPrefix(link, "go/")
@@ -195,13 +190,14 @@ func canonicalizeAlias(store Store, host, link string) string {
 	return link
 }
 
+// normalizeLink ensures link is valid and then normalizes it so all links follow the
+// same uniform pattern.
 func normalizeLink(link string) (string, error) {
 	err := errors.New("invalid link")
 	if !isValidLink(link) {
 		return "", err
 	}
 
-	// Normalize
 	u, err := urlx.Parse(link)
 	if err != nil {
 		return "", err
@@ -214,17 +210,20 @@ func normalizeLink(link string) (string, error) {
 	return normal, nil
 }
 
-// Must be valid path, url.Parse handles paths parsing for us.
+// isValidName confirms that name is a valid path.
 func isValidName(name string) bool {
 	if name == "login" || name == "logout" {
 		// shouldn't be possible anyway, but reject just in case
 		return false
 	}
+
+	// this also should be somewhat redundant - if the name wasn't valid how
+	// did we get here in the first place?
 	_, err := url.Parse("/" + name)
 	return err != nil
 }
 
-// Must be a valid, absolute URL
+// isValidLink confirms that link is a valid, absolute URL.
 func isValidLink(link string) bool {
 	u, err := url.Parse(link)
 	if err != nil {
@@ -271,6 +270,7 @@ func compileTemplates(filenames ...string) (*template.Template, error) {
 	return tmpl, nil
 }
 
+// TODO goagain
 func main() {
 	var hash, file string
 	var fuzzy bool
@@ -294,6 +294,10 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// Set up the server with timeouts such that it can be used in production. Furthermore, we rate
+	// limit our actions to 10 QPS for some slight mitigation against scanning attacks. Note: this
+	// will not prevent a motivated attacker - URLs which are secret or do not have their own auth
+	// should not be used with *any* URL shortening service.
 	srv := &http.Server{
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 10 * time.Second,

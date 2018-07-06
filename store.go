@@ -8,7 +8,14 @@ import (
 	"sync"
 )
 
-// Simple file store, use sqlite3 for a more robust backend
+// FileStore provides a simple file-backed implementation of the Store
+// interface. The mapping between names and links is written to the file for
+// persistence and resiliency to restarts, but cache serves as the in-memory
+// representation of the file for serving requests, with the order array
+// existing to allow correct iteration. This store also supports the notion of
+// 'fuzzy' lookup if initialized with fuzzy - hyphens and underscores and
+// capitalization will be ignored in name during lookups. Access to all fields
+// except fuzzy must be guarded by lock.
 type FileStore struct {
 	fuzzy bool
 	order []string
@@ -17,6 +24,11 @@ type FileStore struct {
 	lock  *sync.RWMutex
 }
 
+// Opens a FileStore backed by filename (and optional fz to enable fuzzy
+// lookups). If the file already exists the store will initialize its state
+// with the contents, otherwise future calls to Set will write to the file for
+// future startups. The FileStore returned should be closed with Close once
+// it is no longer in use.
 func Open(filename string, fz ...bool) (*FileStore, error) {
 	fuzzy := false
 	if len(fz) > 0 {
@@ -53,6 +65,7 @@ func Open(filename string, fz ...bool) (*FileStore, error) {
 	return s, nil
 }
 
+// Close closes the FileStore returned by Open.
 func (s *FileStore) Close() error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
@@ -128,5 +141,5 @@ func (s *FileStore) set(name, link string) {
 }
 
 func fuzz(name string) string {
-	return strings.Replace(strings.Replace(name, "-", "", -1), "_", "", -1)
+	return strings.ToLower(strings.Replace(strings.Replace(name, "-", "", -1), "_", "", -1))
 }

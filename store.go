@@ -1,24 +1,33 @@
 package golinks
 
 import (
+	"bufio"
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 )
 
 // Simple file store, use sqlite3 for a more robust backend
 type FileStore struct {
+	fuzzy bool
 	order []string
 	cache map[string]string
 	file  *os.File
 	lock  *sync.RWMutex
 }
 
-func Open(filename string) (*FileStore, error) {
-	return readFile(&FileStore{})
-}
+func Open(filename string, fz ...bool) (*FileStore, error) {
+	fuzzy := false
+	if len(fz) > 0 {
+		fuzzy = fz[0]
+	}
 
-func readFile(s *FileStore) (*FileStore, error) {
+	s := &FileStore{fuzzy: fuzzy, cache: make(map[string]string)}
+
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
 	f, err := os.OpenFile(filename, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0755)
 	if err != nil {
 		return nil, err
@@ -28,14 +37,12 @@ func readFile(s *FileStore) (*FileStore, error) {
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
 		split := strings.Split(scanner.Text(), " ")
-		s.order = append(s.order, name)
+		s.order = append(s.order, split[0])
 		switch len(split) {
 		case 1:
 			s.set(split[0], "")
-			break
 		case 2:
 			s.set(split[0], split[1])
-			break
 		default:
 			return nil, fmt.Errorf("invalid line in %s: %s", filename, scanner.Text())
 		}
@@ -43,10 +50,14 @@ func readFile(s *FileStore) (*FileStore, error) {
 	if err := scanner.Err(); err != nil {
 		return nil, err
 	}
+	return s, nil
 }
 
-func Close() error {
-	return file.Close()
+func (s *FileStore) Close() error {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	return s.file.Close()
 }
 
 func (s *FileStore) Get(name string) (string, bool) {
@@ -55,7 +66,7 @@ func (s *FileStore) Get(name string) (string, bool) {
 
 	link, ok := s.get(name)
 	if !ok || link == "" {
-		return nil, false
+		return "", false
 	}
 	return link, true
 }
@@ -64,7 +75,7 @@ func (s *FileStore) Set(name, link string) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	_, err := f.WriteString(fmt.Sprintf("%s %s", name, link))
+	_, err := s.file.WriteString(fmt.Sprintf("%s %s", name, link))
 	if err != nil {
 		return err
 	}
@@ -74,10 +85,10 @@ func (s *FileStore) Set(name, link string) error {
 }
 
 func (s *FileStore) Iterate(cb func(name, link string) error) error {
-	var seen map[int]bool
+	seen := make(map[string]bool)
 	for i := len(s.order) - 1; i >= 0; i-- {
-		next := order[i]
-		_, ok = seen[next]
+		next := s.order[i]
+		_, ok := seen[next]
 		seen[next] = true
 		if !ok {
 			link, ok := s.Get(next)
@@ -88,10 +99,15 @@ func (s *FileStore) Iterate(cb func(name, link string) error) error {
 			}
 		}
 	}
+	return nil
 }
 
-func (s *FileStore) get(name) (string, bool) {
-	return s.cache[name]
+func (s *FileStore) get(name string) (string, bool) {
+	link, ok := s.cache[name]
+	if (!ok || link == "") && s.fuzzy {
+		link, ok = s.cache[fuzz(name)]
+	}
+	return link, ok
 }
 
 func (s *FileStore) set(name, link string) {
@@ -100,44 +116,17 @@ func (s *FileStore) set(name, link string) {
 	} else {
 		s.cache[name] = link
 	}
-}
 
-// TODO dump to new file or stdout, then swap? replace on restarts?
-func (s *FileStore) dump() error {
-	s.Iterate(func(name, url string) error {
-		// TODO wrong, need to reverse!
-		return f.WriteString(fmt.Sprintf("%s %s", name, link))
-	})
-}
-
-// Uses fuzzy matching
-type FuzzyFileStore struct {
-	*FileStore
-}
-
-func FuzzyOpen(filename string) (*FuzzyFileStore, error) {
-	return readFile(&FuzzyFileStore{})
-}
-
-func (s *FileStore) get(name) (string, bool) {
-	link, ok := s.cache[name]
-	if !ok || link == "" {
-		link, ok = s.cache[fuzz(name)]
-	}
-	return link, ok
-}
-
-func (s *FuzzyFileStore) set(name, link string) {
-	fuzzed := fuzz(name)
-	if link == "" {
-		delete(s.cache, name)
-		delete(s.cache, fuzzed)
-	} else {
-		s.cache[name] = link
-		s.cache[fuzzed] = link
+	if s.fuzzy {
+		fuzzed := fuzz(name)
+		if link == "" {
+			delete(s.cache, fuzzed)
+		} else {
+			s.cache[fuzzed] = link
+		}
 	}
 }
 
 func fuzz(name string) string {
-	return strings.Replace(strings.Replace(name, "-", ""), "_", "")
+	return strings.Replace(strings.Replace(name, "-", "", -1), "_", "", -1)
 }

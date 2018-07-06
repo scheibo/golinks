@@ -322,12 +322,7 @@ func main() {
 	}
 
 	auth := a1.New(hash)
-	var store *Store
-	if fuzzy {
-		store, err := s.OpenFuzzy(file)
-	} else {
-		store, err := s.Open(file)
-	}
+	store, err := s.Open(file, fuzzy)
 	if err != nil {
 		log.Fatal(err)
 	}

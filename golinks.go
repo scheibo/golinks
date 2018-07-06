@@ -299,7 +299,7 @@ func main() {
 		WriteTimeout: 10 * time.Second,
 		IdleTimeout:  120 * time.Second,
 		Addr:         fmt.Sprintf(":%v", port),
-		Handler:      a1.RateLimit(serve(auth, store), 10),
+		Handler:      a1.RateLimit(10, serve(auth, store)),
 	}
 
 	log.Println(srv.ListenAndServe())

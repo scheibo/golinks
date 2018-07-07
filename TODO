@@ -37,3 +37,8 @@ ca cycling-analytics
 #2) send on lose focus (mouse out), not just enter
 3) rerender index on success
 #4) handle update NAME = not just POST, need to pass name=param as well! can implement as delete+set on server, but ugly on client
+
+
+#5) editing links better (on focus, replace link with text?)
+6) https://jaydenseric.com/blog/favicon-optimization
+#7) remove autofocus and special logic and just focus on load

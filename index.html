@@ -47,16 +47,6 @@
       font-style: italic;
     }
 
-    .new.link {
-      padding: 0em;
-    }
-
-    input {
-      width: 99.3%;
-      padding: 0.45em 0 0.45em 0.2em;
-      border: none;
-    }
-
     /* Mobile - Small */
     table {
       font-size: 10px;
@@ -96,13 +86,8 @@
     <table>
       <tbody>
         <tr>
-          <td class="name new" contenteditable data-orig="{{.Name}}">{{.Name}}</td>
-          <td class="link new" data-orig="">
-            {{if (.Name) ne ""}}
-              <input id="new-link" name="link" autofocus />
-            {{else}}
-              <input id="new-link" name="link" />
-            {{end}}
+          <td class="new name" id="new-name" contenteditable data-orig="{{.Name}}">{{.Name}}</td>
+          <td class="new link" id="new-link" contenteditable data-orig="">
          </td>
         </tr>
         {{range $pair := .Data}}
@@ -151,8 +136,7 @@
       };
 
       function handle(el) {
-        var nameEl, linkEl, link, create;
-        create = false;
+        var nameEl, linkEl;
         if (el.classList.contains('link')) {
           linkEl = el;
           nameEl = el.previousSibling;
@@ -160,15 +144,21 @@
           linkEl = el.nextSibling;
           nameEl = el;
         }
-       if (el.classList.contains('new')) {
-          link = document.getElementById('new-link').value;
+
+        // Reset link element
+        if (linkEl.firstElementChild) {
+          linkEl.firstElementChild.contentEditable = "false";
+          linkEl.firstElementChild.style.color = "blue";
+        }
+
+        var create = false;
+        if (el.classList.contains('new')) {
           create = true;
-        } else {
-          link = linkEl.textContent.trim();
         }
 
         var name = nameEl.textContent.trim(),
             orig = nameEl.dataset.orig,
+            link = linkEl.textContent.trim();
             linkOrig = linkEl.dataset.orig;
 
         // if name is deleted, intention is to delete link
@@ -210,10 +200,24 @@
         }
       };
 
+      function click(event) {
+        window.console.log(this);
+        this.firstElementChild.contentEditable = "true";
+        this.firstElementChild.style.color = "black";
+      };
+
       var tds = document.getElementsByTagName('td');
       for (var i = 0; i < tds.length; i++) {
         tds[i].addEventListener('focusout', focusout, false);
         tds[i].addEventListener('keydown', keydown, false);
+
+        if (tds[i].classList.contains('link')) {
+          tds[i].addEventListener('click', click, false);
+        }
+      }
+
+      if (document.getElementById('new-name').dataset.orig != "") {
+        document.getElementById('new-link').focus();
       }
     });
   </script>

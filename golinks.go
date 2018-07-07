@@ -41,19 +41,19 @@ type Store interface {
 	Iterate(cb func(name, link string) error) error
 }
 
-// serve acts as the router for the application: "favicon.png", "/login", "/logout" are
+// serve acts as the router for the application: "favicon.ico", "/login", "/logout" are
 // treated specially, everything else will either add or display mappings from name to links.
 func serve(auth *a1.Client, store Store) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		path := r.URL.Path
 		log.Printf("%s %s\n", r.Method, path)
 		switch path {
-		case "/favicon.ico", "/favicon.png":
-			http.ServeFile(w, r, "favicon.png")
+		case "/favicon.ico":
+			http.ServeFile(w, r, "favicon.ico")
 		case "/login":
 			switch r.Method {
 			case "GET":
-				auth.CustomLoginPage("favicon.png", fmt.Sprintf("login - %s", r.Host), "/login").ServeHTTP(w, r)
+				auth.CustomLoginPage("favicon.ico", fmt.Sprintf("login - %s", r.Host), "/login").ServeHTTP(w, r)
 			case "POST":
 				auth.Login("/login", "/").ServeHTTP(w, r)
 			default:
@@ -239,7 +239,6 @@ func normalizeLink(link string) (string, error) {
 // isValidName confirms that name is a valid path.
 func isValidName(name string) bool {
 	if name == "favicon.ico" ||
-		name == "favicon.png" ||
 		name == "login" ||
 		name == "logout" {
 		// shouldn't be possible anyway, but reject just in case

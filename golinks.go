@@ -133,7 +133,7 @@ func postLink(store Store, name string, update bool) http.Handler {
 		link := r.PostFormValue("link")
 		// Empty or missing link means we attempt to delete.
 		if link == "" {
-			deleteLink(store, name)
+			deleteLink(store, name).ServeHTTP(w, r)
 			return
 		}
 

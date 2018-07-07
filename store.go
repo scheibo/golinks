@@ -88,7 +88,7 @@ func (s *FileStore) Set(name, link string) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	_, err := s.file.WriteString(fmt.Sprintf("%s %s", name, link))
+	_, err := s.file.WriteString(fmt.Sprintf("%s %s\n", name, link))
 	if err != nil {
 		return err
 	}

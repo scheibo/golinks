@@ -130,9 +130,15 @@ func getIndex(store Store, token string, name string) http.Handler {
 // updating already existing mappings.
 func postLink(store Store, name string, update bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		n := r.PostFormValue("name")
 		link := r.PostFormValue("link")
+
 		// Empty or missing link means we attempt to delete.
 		if link == "" {
+			if n != name {
+				httpError(w, 400)
+				return
+			}
 			deleteLink(store, name).ServeHTTP(w, r)
 			return
 		}
@@ -145,11 +151,27 @@ func postLink(store Store, name string, update bool) http.Handler {
 			return
 		}
 
+		// If the name in the form body is present and doesn't match name then we delete the
+		// original name and use the name from the body instead/
+		del := ""
+		if n != "" && n != name {
+			del = name
+			name = n
+		}
+
 		// UPDATE should only work on links which already existed
 		if update {
 			_, ok := store.Get(name)
 			if !ok {
 				httpError(w, 404)
+				return
+			}
+		}
+
+		if del != "" {
+			err = store.Set(del, "")
+			if err != nil {
+				httpError(w, 500, err)
 				return
 			}
 		}

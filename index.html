@@ -47,6 +47,16 @@
       font-style: italic;
     }
 
+    .new.link {
+      padding: 0em;
+    }
+
+    input {
+      width: 99.3%;
+      padding: 0.45em 0 0.45em 0.2em;
+      border: none;
+    }
+
     /* Mobile - Small */
     table {
       font-size: 10px;
@@ -86,17 +96,19 @@
     <table>
       <tbody>
         <tr>
-          <td class="name new" contenteditable>{{.Name}}</td>
-          {{if (.Name) ne ""}}
-            <td class="link new" contenteditable autofocus></td>
-          {{else}}
-            <td class="link new" contenteditable></td>
-          {{end}}
+          <td class="name new" contenteditable data-orig="{{.Name}}">{{.Name}}</td>
+          <td class="link new" data-orig="">
+            {{if (.Name) ne ""}}
+              <input id="new-link" name="link" autofocus />
+            {{else}}
+              <input id="new-link" name="link" />
+            {{end}}
+         </td>
         </tr>
         {{range $pair := .Data}}
         <tr>
-          <td class="name" contenteditable>{{$pair.Name}}</td>
-          <td class="link" contenteditable>
+          <td class="name" contenteditable data-orig="{{.Name}}">{{$pair.Name}}</td>
+          <td class="link" contenteditable data-orig="{{.Link}}">
             <a href="{{$pair.Link}}" contenteditable="false">{{$pair.Link}}</a>
           </td>
         </tr>
@@ -104,5 +116,99 @@
       </tbody>
     </table>
   </div>
+  <script>
+    window.addEventListener("load", function () {
+      // TODO switch to using form
+      function send(orig, name, link) {
+        var xhr = new XMLHttpRequest();
+
+        // Define what happens on successful data submission
+        xhr.addEventListener('load', function(event) {
+          alert('Success');
+          //window.location.reload();
+        });
+
+        // Define what happens in case of error
+        xhr.addEventListener('error', function(event) {
+          alert('Oops! Something goes wrong.');
+        });
+
+        if (!window.location.origin) {
+          window.location.origin =
+            window.location.protocol + "//" +
+            window.location.hostname +
+            (window.location.port ? ':' + window.location.port: '');
+        }
+
+        window.console.log('POST ' + window.location.origin + '/' + encodeURIComponent(orig) + ' name=' + encodeURIComponent(name) + '+link=' + encodeURIComponent(link));
+
+        //xhr.open('POST', window.location.origin + '/' + encodeURIComponent(orig));
+        //xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+        //xhr.send('name=' + encodeURIComponent(name) + '+link=' + encodeURIComponent(link));
+      };
+
+      function handle(el) {
+        var nameEl, linkEl, link;
+        if (el.classList.contains('link')) {
+          linkEl = el;
+          nameEl = el.previousSibling;
+          if (el.classList.contains('new')) {
+            link = document.getElementById("new-link").value;
+          } else {
+            link = linkEl.textContent.trim();
+          }
+        } else {
+          linkEl = el.nextSibling;
+          link = linkEl.textContent.trim()
+          nameEl = el;
+        }
+
+        var name = nameEl.textContent.trim(),
+            orig = nameEl.dataset.orig,
+            linkOrig = linkEl.dataset.orig;
+
+        // if name is deleted, intention is to delete link
+        if (name == '') {
+          name = orig;
+          link = ''
+        }
+
+        var changed = name != orig || link != linkOrig;
+        if (changed) {
+          send(orig, name, link);
+        }
+      };
+
+      function focusOut(event) {
+          handle(this);
+          event.preventDefault();
+      };
+
+      var tds = document.getElementsByTagName("td");
+      for (var i = 0; i < tds.length; i++) {
+        tds[i].addEventListener('focusout', focusOut, false);
+      }
+
+      document.addEventListener('keydown', function (event) {
+        var esc = event.which == 27,
+            nl = event.which == 13,
+            el = event.target,
+            input = el.nodeName != 'INPUT' && el.nodeName != 'TEXTAREA';
+
+        if (input) {
+          if (esc) {
+            // restore state
+            document.execCommand('undo');
+            el.blur();
+          } else if (nl) {
+            handle(el);
+
+            el.blur();
+            event.preventDefault();
+          }
+        }
+      }, true);
+    });
+  </script>
 </body>
 </html>

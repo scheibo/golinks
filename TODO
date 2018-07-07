@@ -30,3 +30,10 @@ ca cycling-analytics
 => ca https://schbo.co/cycling-analytics
 
 [NO] display: make https://schbo.co light grey? bold cycling-analytics?
+
+------
+
+#1) autofocus fix
+#2) send on lose focus (mouse out), not just enter
+3) rerender index on success
+#4) handle update NAME = not just POST, need to pass name=param as well! can implement as delete+set on server, but ugly on client

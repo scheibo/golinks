@@ -118,49 +118,53 @@
   </div>
   <script>
     window.addEventListener("load", function () {
-      // TODO switch to using form
       function send(orig, name, link) {
-        var xhr = new XMLHttpRequest();
+        window.console.log(
+          'POST ' + '/' + encodeURIComponent(orig) +
+          ' name=' + encodeURIComponent(name) +
+          '+link=' + encodeURIComponent(link));
 
-        // Define what happens on successful data submission
-        xhr.addEventListener('load', function(event) {
-          alert('Success');
-          //window.location.reload();
-        });
+        var form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/' + encodeURIComponent(orig)
 
-        // Define what happens in case of error
-        xhr.addEventListener('error', function(event) {
-          alert('Oops! Something goes wrong.');
-        });
+        var origEl = document.createElement('input');
+        origEl.name='orig'
+        origEl.value = orig;
+        origEl.type = 'hidden'
+        form.appendChild(origEl);
 
-        if (!window.location.origin) {
-          window.location.origin =
-            window.location.protocol + "//" +
-            window.location.hostname +
-            (window.location.port ? ':' + window.location.port: '');
-        }
+        var nameEl = document.createElement('input');
+        nameEl.name='name'
+        nameEl.value = name;
+        nameEl.type = 'hidden'
+        form.appendChild(nameEl);
 
-        window.console.log('POST ' + window.location.origin + '/' + encodeURIComponent(orig) + ' name=' + encodeURIComponent(name) + '+link=' + encodeURIComponent(link));
+        var linkEl = document.createElement('input');
+        linkEl.name='link'
+        linkEl.value = link;
+        linkEl.type = 'hidden'
+        form.appendChild(linkEl);
 
-        //xhr.open('POST', window.location.origin + '/' + encodeURIComponent(orig));
-        //xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-        //xhr.send('name=' + encodeURIComponent(name) + '+link=' + encodeURIComponent(link));
+        document.body.appendChild(form);
+        form.submit();
       };
 
       function handle(el) {
-        var nameEl, linkEl, link;
+        var nameEl, linkEl, link, create;
+        create = false;
         if (el.classList.contains('link')) {
           linkEl = el;
           nameEl = el.previousSibling;
-          if (el.classList.contains('new')) {
-            link = document.getElementById("new-link").value;
-          } else {
-            link = linkEl.textContent.trim();
-          }
         } else {
           linkEl = el.nextSibling;
-          link = linkEl.textContent.trim()
           nameEl = el;
+        }
+       if (el.classList.contains('new')) {
+          link = document.getElementById('new-link').value;
+          create = true;
+        } else {
+          link = linkEl.textContent.trim();
         }
 
         var name = nameEl.textContent.trim(),
@@ -173,41 +177,44 @@
           link = ''
         }
 
+        // if we're creating a new link, orig was just a placeholder
+        if (create) {
+          orig = name
+        }
+
         var changed = name != orig || link != linkOrig;
-        if (changed) {
+        if (changed && name != '' && !(create && link == '')) {
           send(orig, name, link);
         }
       };
 
-      function focusOut(event) {
+      function focusout(event) {
           handle(this);
           event.preventDefault();
       };
 
-      var tds = document.getElementsByTagName("td");
-      for (var i = 0; i < tds.length; i++) {
-        tds[i].addEventListener('focusout', focusOut, false);
-      }
-
-      document.addEventListener('keydown', function (event) {
+      function keydown(event) {
         var esc = event.which == 27,
             nl = event.which == 13,
-            el = event.target,
-            input = el.nodeName != 'INPUT' && el.nodeName != 'TEXTAREA';
+            el = this;
 
-        if (input) {
-          if (esc) {
-            // restore state
-            document.execCommand('undo');
-            el.blur();
-          } else if (nl) {
-            handle(el);
+        if (esc) {
+          // restore state
+          document.execCommand('undo');
+          el.blur();
+        } else if (nl) {
+          handle(el);
 
-            el.blur();
-            event.preventDefault();
-          }
+          el.blur();
+          event.preventDefault();
         }
-      }, true);
+      };
+
+      var tds = document.getElementsByTagName('td');
+      for (var i = 0; i < tds.length; i++) {
+        tds[i].addEventListener('focusout', focusout, false);
+        tds[i].addEventListener('keydown', keydown, false);
+      }
     });
   </script>
 </body>

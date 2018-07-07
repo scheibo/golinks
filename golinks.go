@@ -86,7 +86,6 @@ func serve(auth *a1.Client, store Store) http.Handler {
 // getLink is the handler for any GET request - if we know of a mapping we redirect, otherwise
 // we check auth and render the index with the name already filled into the new entry field.
 func getLink(auth *a1.Client, store Store, name string) http.Handler {
-	log.Println("getLink")
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		link, ok := store.Get(name)
 		if !ok {
@@ -96,6 +95,7 @@ func getLink(auth *a1.Client, store Store, name string) http.Handler {
 			}
 
 			getIndex(store, auth.XSRF(), name).ServeHTTP(w, r)
+			return
 		}
 		http.Redirect(w, r, link, 302)
 	})
@@ -103,7 +103,6 @@ func getLink(auth *a1.Client, store Store, name string) http.Handler {
 
 // getIndex renders the index of all saved name -> link mappings for an authed user.
 func getIndex(store Store, token string, name string) http.Handler {
-	log.Println("getIndex")
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var data []NameLink
 		err := store.Iterate(func(name, link string) error {
@@ -221,9 +220,9 @@ func normalizeLink(link string) (string, error) {
 // isValidName confirms that name is a valid path.
 func isValidName(name string) bool {
 	if name == "favicon.ico" ||
-	   name == "favicon.png" ||
-	   name == "login" ||
-	   name == "logout" {
+		name == "favicon.png" ||
+		name == "login" ||
+		name == "logout" {
 		// shouldn't be possible anyway, but reject just in case
 		return false
 	}

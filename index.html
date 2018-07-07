@@ -34,12 +34,12 @@
     }
 
     .name {
-      font-weight: bold
+      font-weight: bold;
+      width: 20%;
     }
 
     .link {
       word-break: break-all;
-      max-width: 70%;
     }
 
     .new {
@@ -87,13 +87,17 @@
       <tbody>
         <tr>
           <td class="name new" contenteditable>{{.Name}}</td>
-          <td class="link new" contenteditable {{if .Name != ""}}autofocus{{end}}></td>
+          {{if (.Name) ne ""}}
+            <td class="link new" contenteditable autofocus></td>
+          {{else}}
+            <td class="link new" contenteditable></td>
+          {{end}}
         </tr>
         {{range $pair := .Data}}
         <tr>
-          <td class="name" contenteditable>{{$pair.name}}</td>
+          <td class="name" contenteditable>{{$pair.Name}}</td>
           <td class="link" contenteditable>
-            <a href="{{$pair.link}}">{{$pair.link}}</a>
+            <a href="{{$pair.Link}}">{{$pair.Link}}</a>
           </td>
         </tr>
         {{end}}

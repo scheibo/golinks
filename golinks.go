@@ -53,7 +53,7 @@ func serve(auth *a1.Client, store Store) http.Handler {
 		case "/login":
 			switch r.Method {
 			case "GET":
-				auth.CustomLoginPage("favicon.png", fmt.Sprintf("login - %s", r.URL.Host), "/login").ServeHTTP(w, r)
+				auth.CustomLoginPage("favicon.png", fmt.Sprintf("login - %s", r.Host), "/login").ServeHTTP(w, r)
 			case "POST":
 				auth.Login("/login", "/").ServeHTTP(w, r)
 			default:
@@ -120,7 +120,7 @@ func getIndex(store Store, token string, name string) http.Handler {
 			Name  string
 			Data  []NameLink
 		}{
-			fmt.Sprintf("goto - %s", r.URL.Host), token, name, data,
+			fmt.Sprintf("goto - %s", r.Host), token, name, data,
 		})
 	})
 }
@@ -139,7 +139,7 @@ func postLink(store Store, name string, update bool) http.Handler {
 
 		// If link we actually an alias ("name" or "go/name") instead of a URL, we convert it.
 		// We also normalize the link so everything follows a uniform pattern.
-		link, err := normalizeLink(canonicalizeAlias(store, r.URL.Host, link))
+		link, err := normalizeLink(canonicalizeAlias(store, r.Host, link))
 		if err != nil {
 			httpError(w, 400)
 			return

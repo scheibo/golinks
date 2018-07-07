@@ -115,6 +115,31 @@ func (s *FileStore) Iterate(cb func(name, link string) error) error {
 	return nil
 }
 
+func (s *FileStore) Dump(filename string) error {
+	lines := []string
+	err := s.Iterate(func(name, link string) error) {
+		lines = append(lines, fmt.Sprintf("%s %s\n", name, link))
+	});
+	if err != nil {
+		return  err
+	}
+
+  f, err := os.OpenFile(filename, os.O_CREATE|os.O_WR|os.O_TRUNC, 0755)
+	defer f.Close()
+	if err != nil {
+		return err
+	}
+
+	for i := len(lines) - 1; i >= 0; i-- {
+		_, err = f.WriteString(lines[i])
+		if err != nil {
+			return err
+		}
+	}
+
+  return nil
+}
+
 func (s *FileStore) get(name string) (string, bool) {
 	link, ok := s.cache[name]
 	if (!ok || link == "") && s.fuzzy {

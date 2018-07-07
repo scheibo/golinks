@@ -105,14 +105,11 @@ func getLink(auth *a1.Client, store Store, name string) http.Handler {
 func getIndex(store Store, token string, name string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var data []NameLink
-		err := store.Iterate(func(name, link string) error {
+		_ = store.Iterate(func(name, link string) error {
 			data = append(data, NameLink{Name: name, Link: link})
 			return nil
 		})
-		if err != nil {
-			httpError(w, 500, err)
-			return
-		}
+
 		t := template.Must(compileTemplates("index.html"))
 		_ = t.Execute(w, struct {
 			Title string
@@ -305,13 +302,13 @@ func compileTemplates(filenames ...string) (*template.Template, error) {
 	return tmpl, nil
 }
 
-// TODO goagain
 func main() {
-	var hash, file string
+	var hash, file, dump string
 	var fuzzy bool
 	var port int64
 
 	flag.StringVar(&file, "file", "", "file for store")
+	flag.StringVar(&dump, "dump", "", "optional file to dump cleaned store to")
 	flag.StringVar(&hash, "hash", os.Getenv("GOTO_PASSWORD_HASH"), "hash of password")
 	flag.BoolVar(&fuzzy, "fuzzy", false, "whether to use fuzzy name semantics")
 	flag.Int64Var(&port, "port", 8968, "Port")
@@ -327,6 +324,12 @@ func main() {
 	store, err := Open(file, fuzzy)
 	if err != nil {
 		log.Fatal(err)
+	}
+	if dump != "" {
+		err = store.Dump(dump)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	// Set up the server with timeouts such that it can be used in production. Furthermore, we rate

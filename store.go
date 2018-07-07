@@ -24,7 +24,7 @@ type FileStore struct {
 	lock  sync.RWMutex
 }
 
-// Opens a FileStore backed by filename (and optional fz to enable fuzzy
+// Open a FileStore backed by filename (and optional fz to enable fuzzy
 // lookups). If the file already exists the store will initialize its state
 // with the contents, otherwise future calls to Set will write to the file for
 // future startups. The FileStore returned should be closed with Close once
@@ -40,7 +40,7 @@ func Open(filename string, fz ...bool) (*FileStore, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	f, err := os.OpenFile(filename, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0755)
+	f, err := os.OpenFile(filename, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0600)
 	if err != nil {
 		return nil, err
 	}
@@ -115,17 +115,18 @@ func (s *FileStore) Iterate(cb func(name, link string) error) error {
 	return nil
 }
 
+// Dump writes out a cleaned version of the store's state to filename.
 func (s *FileStore) Dump(filename string) error {
-	lines := []string
-	err := s.Iterate(func(name, link string) error) {
+	var lines []string
+	// Unfortunately, we can't output it in the iteration order because then it
+	// be in reverse once read back in. Instead we save the lines we want to write
+	// and iterate through backwards after.
+	_ = s.Iterate(func(name, link string) error {
 		lines = append(lines, fmt.Sprintf("%s %s\n", name, link))
-	});
-	if err != nil {
-		return  err
-	}
+		return nil
+	})
 
-  f, err := os.OpenFile(filename, os.O_CREATE|os.O_WR|os.O_TRUNC, 0755)
-	defer f.Close()
+	f, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0600)
 	if err != nil {
 		return err
 	}
@@ -137,7 +138,7 @@ func (s *FileStore) Dump(filename string) error {
 		}
 	}
 
-  return nil
+	return f.Close()
 }
 
 func (s *FileStore) get(name string) (string, bool) {

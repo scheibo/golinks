@@ -201,9 +201,10 @@
       };
 
       function click(event) {
-        window.console.log(this);
-        this.firstElementChild.contentEditable = "true";
-        this.firstElementChild.style.color = "black";
+        if (linkEl.firstElementChild) {
+          this.firstElementChild.contentEditable = "true";
+          this.firstElementChild.style.color = "black";
+        }
       };
 
       var tds = document.getElementsByTagName('td');

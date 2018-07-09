@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"flag"
 	"fmt"
@@ -10,8 +11,10 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/goware/urlx"
@@ -41,6 +44,8 @@ type Store interface {
 	Iterate(cb func(name, link string) error) error
 }
 
+var healthy int32
+
 // serve acts as the router for the application: "favicon.ico", "/login", "/logout" are
 // treated specially, everything else will either add or display mappings from name to links.
 func serve(auth *a1.Client, store Store) http.Handler {
@@ -48,6 +53,8 @@ func serve(auth *a1.Client, store Store) http.Handler {
 		path := r.URL.Path
 		log.Printf("%s %s\n", r.Method, path)
 		switch path {
+		case "/healthz":
+			healthz().ServeHTTP(w, r)
 		case "/favicon.ico":
 			http.ServeFile(w, r, "favicon.ico")
 		case "/login":
@@ -238,7 +245,8 @@ func normalizeLink(link string) (string, error) {
 
 // isValidName confirms that name is a valid path.
 func isValidName(name string) bool {
-	if name == "favicon.ico" ||
+	if name == "healthz" ||
+		name == "favicon.ico" ||
 		name == "login" ||
 		name == "logout" {
 		// shouldn't be possible anyway, but reject just in case
@@ -301,6 +309,43 @@ func compileTemplates(filenames ...string) (*template.Template, error) {
 	return tmpl, nil
 }
 
+func healthz() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if atomic.LoadInt32(&healthy) == 1 {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		w.WriteHeader(http.StatusServiceUnavailable)
+	})
+}
+
+func start(srv *http.Server) {
+	done := make(chan bool)
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt)
+
+	go func() {
+		<-quit
+		atomic.StoreInt32(&healthy, 0)
+
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		srv.SetKeepAlivesEnabled(false)
+		if err := srv.Shutdown(ctx); err != nil {
+			log.Fatalf("Could not gracefully shutdown the srv: %v\n", err)
+		}
+		close(done)
+	}()
+
+	atomic.StoreInt32(&healthy, 1)
+	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		log.Fatalf("Could not listen on %s: %v\n", srv.Addr, err)
+	}
+
+	<-done
+}
+
 func main() {
 	var hash, file, dump string
 	var fuzzy bool
@@ -343,7 +388,8 @@ func main() {
 		Handler:      a1.RateLimit(10, serve(auth, store)),
 	}
 
-	log.Println(srv.ListenAndServe())
+	start(srv)
+
 	err = store.Close()
 	if err != nil {
 		log.Fatal(err)

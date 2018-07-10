@@ -24,15 +24,18 @@ type FileStore struct {
 	lock  sync.RWMutex
 }
 
-// Open a FileStore backed by filename (and optional fz to enable fuzzy
-// lookups). If the file already exists the store will initialize its state
-// with the contents, otherwise future calls to Set will write to the file for
-// future startups. The FileStore returned should be closed with Close once
-// it is no longer in use.
-func Open(filename string, fz ...bool) (*FileStore, error) {
-	fuzzy := false
-	if len(fz) > 0 {
-		fuzzy = fz[0]
+// Open a FileStore backed by filename (and optional bools to enable fuzzy
+// lookups and compaction). If the file already exists the store will
+// initialize its state with the contents, otherwise future calls to Set will
+// write to the file for future startups. The FileStore returned should be
+// closed with Close once it is no longer in use.
+func Open(filename string, bools ...bool) (*FileStore, error) {
+	fuzzy, compact := false, false
+	if len(bools) > 0 {
+		fuzzy = bools[0]
+		if len(bools) > 1 {
+			compact = bools[1]
+		}
 	}
 
 	s := &FileStore{fuzzy: fuzzy, cache: make(map[string]string)}
@@ -62,6 +65,22 @@ func Open(filename string, fz ...bool) (*FileStore, error) {
 	if err := scanner.Err(); err != nil {
 		return nil, err
 	}
+
+	if compact {
+		err = f.Close()
+		if err != nil {
+			return nil, err
+		}
+		err = s.Dump(filename)
+		if err != nil {
+			return nil, err
+		}
+		// Re-read the compacted dump, taking care to make sure compact is set to
+		// false so we don't infinitely recurse.
+		s, err := Open(filename, fuzzy, false)
+		return s, err
+	}
+
 	return s, nil
 }
 

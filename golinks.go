@@ -302,14 +302,14 @@ func compileTemplates(filenames ...string) (*template.Template, error) {
 }
 
 func main() {
-	var hash, file, dump string
-	var fuzzy bool
+	var hash, file string
+	var fuzzy, compact bool
 	var port int64
 
 	flag.StringVar(&file, "file", "", "file for store")
-	flag.StringVar(&dump, "dump", "", "optional file to dump cleaned store to")
 	flag.StringVar(&hash, "hash", os.Getenv("GOTO_PASSWORD_HASH"), "hash of password")
 	flag.BoolVar(&fuzzy, "fuzzy", false, "whether to use fuzzy name semantics")
+	flag.BoolVar(&compact, "compact", false, "whether to compact the store")
 	flag.Int64Var(&port, "port", 8968, "Port")
 
 	flag.Parse()
@@ -320,15 +320,9 @@ func main() {
 	}
 
 	auth := a1.New(hash)
-	store, err := Open(file, fuzzy)
+	store, err := Open(file, fuzzy, compact)
 	if err != nil {
 		log.Fatal(err)
-	}
-	if dump != "" {
-		err = store.Dump(dump)
-		if err != nil {
-			log.Fatal(err)
-		}
 	}
 
 	// Set up the server with timeouts such that it can be used in production. Furthermore, we rate

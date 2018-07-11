@@ -40,9 +40,6 @@ func Open(filename string, bools ...bool) (*FileStore, error) {
 
 	s := &FileStore{fuzzy: fuzzy, cache: make(map[string]string)}
 
-	s.lock.Lock()
-	defer s.lock.Unlock()
-
 	f, err := os.OpenFile(filename, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0600)
 	if err != nil {
 		return nil, err
@@ -117,13 +114,16 @@ func (s *FileStore) Set(name, link string) error {
 }
 
 func (s *FileStore) Iterate(cb func(name, link string) error) error {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+
 	seen := make(map[string]bool)
 	for i := len(s.order) - 1; i >= 0; i-- {
 		next := s.order[i]
 		_, ok := seen[next]
 		seen[next] = true
 		if !ok {
-			link, ok := s.Get(next)
+			link, ok := s.get(next)
 			if ok {
 				if err := cb(next, link); err != nil {
 					return err

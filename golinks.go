@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -117,7 +118,8 @@ func getIndex(store Store, token string, name string) http.Handler {
 			return nil
 		})
 
-		t := template.Must(compileTemplates("index.html"))
+		_, src, _, _ := runtime.Caller(0)
+		t := template.Must(compileTemplates(filepath.Join(filepath.Dir(src), "index.html")))
 		_ = t.Execute(w, struct {
 			Title string
 			Token string

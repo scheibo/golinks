@@ -131,6 +131,13 @@
         linkEl.type = 'hidden'
         form.appendChild(linkEl);
 
+        var token = document.querySelector("meta[name=token]").getAttribute("content");
+        var tokenEl = document.createElement('input');
+        tokenEl.name='token'
+        tokenEl.value = token;
+        tokenEl.type = 'hidden'
+        form.appendChild(tokenEl);
+
         document.body.appendChild(form);
         form.submit();
       };

@@ -105,37 +105,38 @@
     window.addEventListener("load", function () {
       function send(orig, name, link) {
         window.console.log(
-          'POST ' + '/' + encodeURIComponent(orig) +
-          ' name=' + encodeURIComponent(name) +
-          '+link=' + encodeURIComponent(link));
+          "POST " + "/" + encodeURIComponent(orig) +
+          " name=" + encodeURIComponent(name) +
+          "+link=" + encodeURIComponent(link));
 
-        var form = document.createElement('form');
-        form.method = 'POST';
-        form.action = '/' + encodeURIComponent(orig)
+        var form = document.createElement("form");
+        form.method = "POST";
+        form.action = "/" + encodeURIComponent(orig);
 
-        var origEl = document.createElement('input');
-        origEl.name='orig'
+        var origEl = document.createElement("input");
+        origEl.name="orig";
         origEl.value = orig;
-        origEl.type = 'hidden'
+        origEl.type = "hidden";
         form.appendChild(origEl);
 
-        var nameEl = document.createElement('input');
-        nameEl.name='name'
+        var nameEl = document.createElement("input");
+        nameEl.name="name";
         nameEl.value = name;
-        nameEl.type = 'hidden'
+        nameEl.type = "hidden";
         form.appendChild(nameEl);
 
-        var linkEl = document.createElement('input');
-        linkEl.name='link'
+        var linkEl = document.createElement("input");
+        linkEl.name="link";
         linkEl.value = link;
-        linkEl.type = 'hidden'
+        linkEl.type = "hidden";
         form.appendChild(linkEl);
 
-        var token = document.querySelector("meta[name=token]").getAttribute("content");
-        var tokenEl = document.createElement('input');
-        tokenEl.name='token'
+        var token =
+          document.querySelector("meta[name=token]").getAttribute("content");
+        var tokenEl = document.createElement("input");
+        tokenEl.name="token";
         tokenEl.value = token;
-        tokenEl.type = 'hidden'
+        tokenEl.type = "hidden";
         form.appendChild(tokenEl);
 
         document.body.appendChild(form);
@@ -144,7 +145,7 @@
 
       function handle(el) {
         var nameEl, linkEl;
-        if (el.classList.contains('link')) {
+        if (el.classList.contains("link")) {
           linkEl = el;
           nameEl = el.previousSibling;
         } else {
@@ -159,7 +160,7 @@
         }
 
         var create = false;
-        if (el.classList.contains('new')) {
+        if (el.classList.contains("new")) {
           create = true;
         }
 
@@ -169,18 +170,18 @@
             linkOrig = linkEl.dataset.orig;
 
         // if name is deleted, intention is to delete link
-        if (name == '') {
+        if (name == "") {
           name = orig;
-          link = ''
+          link = ""
         }
 
-        // if we're creating a new link, orig was just a placeholder
+        // if we"re creating a new link, orig was just a placeholder
         if (create) {
           orig = name
         }
 
         var changed = name != orig || link != linkOrig;
-        if (changed && name != '' && !(create && link == '')) {
+        if (changed && name != "" && !(create && link == "")) {
           send(orig, name, link);
         }
       };
@@ -197,7 +198,7 @@
 
         if (esc) {
           // restore state
-          document.execCommand('undo');
+          document.execCommand("undo");
           el.blur();
         } else if (nl) {
           handle(el);
@@ -214,18 +215,18 @@
         }
       };
 
-      var tds = document.getElementsByTagName('td');
+      var tds = document.getElementsByTagName("td");
       for (var i = 0; i < tds.length; i++) {
-        tds[i].addEventListener('focusout', focusout, false);
-        tds[i].addEventListener('keydown', keydown, false);
+        tds[i].addEventListener("focusout", focusout, false);
+        tds[i].addEventListener("keydown", keydown, false);
 
-        if (tds[i].classList.contains('link')) {
-          tds[i].addEventListener('click', click, false);
+        if (tds[i].classList.contains("link")) {
+          tds[i].addEventListener("click", click, false);
         }
       }
 
-      if (document.getElementById('new-name').dataset.orig != "") {
-        document.getElementById('new-link').focus();
+      if (document.getElementById("new-name").dataset.orig != "") {
+        document.getElementById("new-link").focus();
       }
     });
   </script>

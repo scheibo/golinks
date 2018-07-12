@@ -57,11 +57,11 @@ func serve(auth *a1.Client, store Store) http.Handler {
 		case "/healthz":
 			healthz().ServeHTTP(w, r)
 		case "/favicon.ico":
-			http.ServeFile(w, r, "favicon.ico")
+			http.ServeFile(w, r, resource("favicon.ico"))
 		case "/login":
 			switch r.Method {
 			case "GET":
-				auth.CustomLoginPage("favicon.ico", fmt.Sprintf("login - %s", r.Host), "/login").ServeHTTP(w, r)
+				auth.CustomLoginPage(resource("favicon.ico"), fmt.Sprintf("login - %s", r.Host), "/login").ServeHTTP(w, r)
 			case "POST":
 				auth.Login("/login", "/").ServeHTTP(w, r)
 			default:
@@ -118,8 +118,7 @@ func getIndex(store Store, token string, name string) http.Handler {
 			return nil
 		})
 
-		_, src, _, _ := runtime.Caller(0)
-		t := template.Must(compileTemplates(filepath.Join(filepath.Dir(src), "index.html")))
+		t := template.Must(compileTemplates(resource("index.html")))
 		_ = t.Execute(w, struct {
 			Title string
 			Token string
@@ -276,6 +275,11 @@ func httpError(w http.ResponseWriter, code int, err ...error) {
 		msg = fmt.Sprintf("%s: %s", msg, err[0].Error())
 	}
 	http.Error(w, msg, code)
+}
+
+func resource(filename string) string {
+	_, src, _, _ := runtime.Caller(0)
+	return filepath.Join(filepath.Dir(src), "index.html")
 }
 
 func compileTemplates(filenames ...string) (*template.Template, error) {

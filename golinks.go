@@ -279,7 +279,7 @@ func httpError(w http.ResponseWriter, code int, err ...error) {
 
 func resource(filename string) string {
 	_, src, _, _ := runtime.Caller(0)
-	return filepath.Join(filepath.Dir(src), "index.html")
+	return filepath.Join(filepath.Dir(src), filename)
 }
 
 func compileTemplates(filenames ...string) (*template.Template, error) {

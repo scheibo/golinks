@@ -61,7 +61,7 @@ func serve(auth *a1.Client, store Store) http.Handler {
 		case "/login":
 			switch r.Method {
 			case "GET":
-				auth.CustomLoginPage(resource("favicon.ico"), fmt.Sprintf("login - %s", r.Host), "/login").ServeHTTP(w, r)
+				auth.CustomLoginPage("/favicon.ico", fmt.Sprintf("login - %s", r.Host), "/login").ServeHTTP(w, r)
 			case "POST":
 				auth.Login("/login", "/").ServeHTTP(w, r)
 			default:

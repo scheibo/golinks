@@ -104,11 +104,6 @@
   <script>
     window.addEventListener("load", function () {
       function send(orig, name, link) {
-        window.console.log(
-          "POST " + "/" + encodeURIComponent(orig) +
-          " name=" + encodeURIComponent(name) +
-          "+link=" + encodeURIComponent(link));
-
         var form = document.createElement("form");
         form.method = "POST";
         form.action = "/" + encodeURIComponent(orig);
@@ -175,7 +170,7 @@
           link = ""
         }
 
-        // if we"re creating a new link, orig was just a placeholder
+        // if we're creating a new link, orig was just a placeholder
         if (create) {
           orig = name
         }

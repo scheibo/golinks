@@ -96,16 +96,33 @@ func serve(auth *a1.Client, store Store) http.Handler {
 func getLink(auth *a1.Client, store Store, name string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		link, ok := store.Get(name)
-		if !ok {
-			if !auth.IsAuth(r) {
-				http.Redirect(w, r, "/login", 302)
-				return
-			}
-
-			getIndex(store, auth.XSRF(), name).ServeHTTP(w, r)
+		if ok {
+			http.Redirect(w, r, link, 302)
 			return
 		}
-		http.Redirect(w, r, link, 302)
+
+		n := name
+		i := -1
+		for !ok {
+			i = strings.LastIndexByte(n, '/')
+			if i < 0 {
+				break
+			}
+			n = n[:i]
+			link, ok = store.Get(n)
+		}
+
+		if ok {
+			http.Redirect(w, r, link + name[i:len(name)], 302)
+			return
+		}
+
+		if !auth.IsAuth(r) {
+			http.Redirect(w, r, "/login", 302)
+			return
+		}
+
+		getIndex(store, auth.XSRF(), name).ServeHTTP(w, r)
 	})
 }
 

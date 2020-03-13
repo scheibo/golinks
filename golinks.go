@@ -240,8 +240,8 @@ func normalizeLink(link string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-
-	return normal, nil
+	// silly Google Docs analytics cruft
+	return strings.TrimSuffix(normal, "?usp=sharing"), nil
 }
 
 // isValidName confirms that name is a valid path.
